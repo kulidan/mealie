@@ -9,6 +9,7 @@ import {
   getCookingSession,
   isCookingSessionStale,
   provideCookProgress,
+  stepKey,
   type CookProgress,
 } from "./use-cook-progress";
 import type { RecipeOut, TagOut } from "~/lib/api/types/recipe";
@@ -49,6 +50,27 @@ function mountProvider(recipe: RecipeOut) {
 
   return { wrapper, progress, recipeRef, onUpdated };
 }
+
+describe("stepKey", () => {
+  const step = { title: "", summary: "Boil", text: "Boil the pasta." };
+
+  test("is the same for the same step", () => {
+    expect(stepKey({ ...step }, 2)).toBe(stepKey({ ...step }, 2));
+  });
+
+  test("does not depend on the step id", () => {
+    expect(stepKey({ ...step, id: "one" } as typeof step, 0)).toBe(stepKey({ ...step, id: "two" } as typeof step, 0));
+  });
+
+  test("changes with the position or the text", () => {
+    expect(stepKey(step, 0)).not.toBe(stepKey(step, 1));
+    expect(stepKey(step, 0)).not.toBe(stepKey({ ...step, text: "Boil the pasta for 9 minutes." }, 0));
+  });
+
+  test("accepts steps with empty fields", () => {
+    expect(stepKey({ title: null, summary: null, text: null }, 0)).toMatch(/^0:/);
+  });
+});
 
 describe("getCookingSession", () => {
   test("is null when the recipe is not tagged", () => {

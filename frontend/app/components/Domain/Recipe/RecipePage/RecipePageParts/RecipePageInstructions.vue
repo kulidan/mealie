@@ -527,7 +527,7 @@ import type { RecipeStep, RecipeNote, RecipeIngredient, RecipeAsset, RecipeOut }
 import { uuid4 } from "~/composables/use-utils";
 import { useUserApi, useStaticRoutes } from "~/composables/api";
 import { usePageState } from "~/composables/recipe-page/shared-state";
-import { useCookProgress } from "~/composables/recipe-page/use-cook-progress";
+import { stepKey, useCookProgress } from "~/composables/recipe-page/use-cook-progress";
 import { useExtractIngredientReferences } from "~/composables/recipe-page/use-extract-ingredient-references";
 import DropZone from "~/components/global/DropZone.vue";
 import { alert } from "~/composables/use-toast";
@@ -588,6 +588,11 @@ watch(instructionList, (v) => {
       showTitleEditor.value[element.id] = hasSectionTitle(element.title!);
     }
   });
+
+  // A recipe that is being cooked keeps its done steps when the list is rebuilt.
+  if (!isEditForm.value) {
+    restoreDoneSteps();
+  }
 }, { deep: true });
 
 const showCookMode = ref(false);
@@ -604,7 +609,7 @@ function restoreDoneSteps() {
   }
 
   const done = new Set(cookProgress.doneSteps.value);
-  disabledSteps.value = instructionList.value.flatMap((step, index) => (step.id && done.has(step.id) ? [index] : []));
+  disabledSteps.value = instructionList.value.flatMap((step, index) => (done.has(stepKey(step, index)) ? [index] : []));
 }
 
 function saveDoneSteps() {
@@ -612,14 +617,12 @@ function saveDoneSteps() {
     return;
   }
 
-  const stepIds = disabledSteps.value.flatMap((index) => {
-    const id = instructionList.value[index]?.id;
-    return id ? [id] : [];
+  const stepKeys = disabledSteps.value.flatMap((index) => {
+    const step = instructionList.value[index];
+    return step ? [stepKey(step, index)] : [];
   });
-  cookProgress.setDoneSteps(stepIds);
+  cookProgress.setDoneSteps(stepKeys);
 }
-
-watch(disabledSteps, saveDoneSteps, { deep: true });
 
 // Starting to cook keeps the steps that are already marked as done. Finishing clears them.
 watch(() => cookProgress?.isInProgress.value, (active, wasActive) => {
@@ -664,6 +667,7 @@ function toggleDisabled(stepIndex: number) {
   else {
     disabledSteps.value.push(stepIndex);
   }
+  saveDoneSteps();
 }
 
 function isChecked(stepIndex: number) {
@@ -987,6 +991,7 @@ function toggleCollapseSection(index: number) {
   else {
     disabledSteps.value = [...disabledSteps.value, ...sectionSteps];
   }
+  saveDoneSteps();
 }
 
 const drag = ref(false);
