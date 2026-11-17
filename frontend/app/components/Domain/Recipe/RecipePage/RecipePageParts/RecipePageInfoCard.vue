@@ -65,6 +65,14 @@
                   />
                 </v-col>
               </v-row>
+              <v-row v-if="isOwnGroup && !isEditMode" no-gutters>
+                <v-col
+                  cols="12"
+                  class="d-flex flex-wrap justify-center"
+                >
+                  <RecipePageCookingButton class="mb-4" />
+                </v-col>
+              </v-row>
             </div>
             <div v-if="hasTime" class="mx-6">
               <RecipeTimeCard
@@ -98,6 +106,8 @@ import RecipeLastMade from "~/components/Domain/Recipe/RecipeLastMade.vue";
 import RecipeTimeCard from "~/components/Domain/Recipe/RecipeTimeCard.vue";
 import RecipeYield from "~/components/Domain/Recipe/RecipeYield.vue";
 import RecipePageInfoCardImage from "~/components/Domain/Recipe/RecipePage/RecipePageParts/RecipePageInfoCardImage.vue";
+import RecipePageCookingButton from "~/components/Domain/Recipe/RecipePage/RecipePageParts/RecipePageCookingButton.vue";
+import { usePageState } from "~/composables/recipe-page/shared-state";
 import UserAvatar from "~/components/Domain/User/UserAvatar.vue";
 import { useUserStore } from "~/composables/store/use-user-store";
 import type { RecipeOut } from "~/lib/api/types/recipe";
@@ -114,6 +124,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const { isOwnGroup } = useLoggedInState();
+const { isEditMode } = usePageState(props.recipe.slug);
 
 // group members aren't visible outside the group, so don't fetch them
 const users = isOwnGroup.value ? useUserStore().store : ref<UserSummary[]>([]);
