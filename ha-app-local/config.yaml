@@ -1,0 +1,50 @@
+---
+# Local Home Assistant app that runs the Mealie image built from this fork.
+# Put this folder in the "addons" share of Home Assistant as `mealie_cooking`.
+# The image is built by .github/workflows/build-ha-app.yml, not on the device.
+name: Mealie (Cooking Progress)
+version: "3.30.0-cook.1"
+slug: mealie_cooking
+description: Mealie with Start Cooking and Finish Cooking buttons
+url: https://github.com/kulidan/mealie
+image: ghcr.io/kulidan/mealie-cooking-{arch}
+ingress: true
+ingress_port: 1337
+ingress_stream: true
+panel_icon: mdi:chef-hat
+panel_title: Mealie (Cooking)
+init: false
+arch:
+  - aarch64
+backup: cold
+map:
+  - type: ssl
+    read_only: true
+ports:
+  # Starts on 9930, next to the Mealie app that is already installed on 9929.
+  9000/tcp: 9930
+ports_description:
+  9000/tcp: Web interface & API (not required for Ingress)
+options:
+  allow_signup: false
+  ssl: false
+  certfile: fullchain.pem
+  keyfile: privkey.pem
+  env_vars: []
+schema:
+  log_level: list(trace|debug|info|notice|warning|error|fatal)?
+  base_url: url?
+  allow_signup: bool
+  smtp_host: str?
+  smtp_port: port?
+  smtp_from_name: str?
+  smtp_from_email: email?
+  smtp_auth_strategy: list(TLS|SSL|NONE)?
+  smtp_user: str?
+  smtp_password: password?
+  ssl: bool
+  certfile: str
+  keyfile: str
+  env_vars:
+    - name: match(^[A-Z][A-Z0-9_]*$)
+      value: str
