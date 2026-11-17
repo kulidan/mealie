@@ -21,7 +21,7 @@ permissions:
 
 env:
   # Keep this equal to the version in ha-app-local/config.yaml.
-  APP_VERSION: "3.30.0-cook.1"
+  APP_VERSION: "3.30.0-cook.2"
   IMAGE: ghcr.io/${{ github.repository_owner }}/mealie-cooking-aarch64
 
 jobs:
