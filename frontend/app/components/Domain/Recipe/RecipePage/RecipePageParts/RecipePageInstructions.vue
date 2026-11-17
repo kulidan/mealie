@@ -527,6 +527,7 @@ import type { RecipeStep, RecipeNote, RecipeIngredient, RecipeAsset, Recipe } fr
 import { uuid4 } from "~/composables/use-utils";
 import { useUserApi, useStaticRoutes } from "~/composables/api";
 import { usePageState } from "~/composables/recipe-page/shared-state";
+import { useCookProgress } from "~/composables/recipe-page/use-cook-progress";
 import { useExtractIngredientReferences } from "~/composables/recipe-page/use-extract-ingredient-references";
 import type { NoUndefinedField } from "~/lib/api/types/non-generated";
 import DropZone from "~/components/global/DropZone.vue";
@@ -598,7 +599,48 @@ watch(instructionList, (v) => {
 
 const showCookMode = ref(false);
 
+// ===============================================================
+// Cooking progress
+// While the recipe is being cooked, the steps marked as done are saved with the cooking session,
+// so they survive leaving the page and a reload.
+const cookProgress = useCookProgress();
+
+function restoreDoneSteps() {
+  if (!cookProgress?.isInProgress.value) {
+    return;
+  }
+
+  const done = new Set(cookProgress.doneSteps.value);
+  disabledSteps.value = instructionList.value.flatMap((step, index) => (step.id && done.has(step.id) ? [index] : []));
+}
+
+function saveDoneSteps() {
+  if (!cookProgress?.isInProgress.value || isEditForm.value) {
+    return;
+  }
+
+  const stepIds = disabledSteps.value.flatMap((index) => {
+    const id = instructionList.value[index]?.id;
+    return id ? [id] : [];
+  });
+  cookProgress.setDoneSteps(stepIds);
+}
+
+watch(disabledSteps, saveDoneSteps, { deep: true });
+
+// Starting to cook keeps the steps that are already marked as done. Finishing clears them.
+watch(() => cookProgress?.isInProgress.value, (active, wasActive) => {
+  if (active) {
+    saveDoneSteps();
+  }
+  else if (wasActive) {
+    disabledSteps.value = [];
+  }
+});
+
 onMounted(() => {
+  restoreDoneSteps();
+
   instructionList.value.forEach((element: RecipeStep) => {
     if (element.id !== undefined) {
       showTitleEditor.value[element.id!] = hasSectionTitle(element.title!);

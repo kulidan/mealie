@@ -57,6 +57,7 @@
 import RecipeIngredientListItem from "./RecipeIngredientListItem.vue";
 import { useSessionStorage } from "@vueuse/core";
 import { useIngredientTextParser } from "~/composables/recipes";
+import { useCookProgress } from "~/composables/recipe-page/use-cook-progress";
 import type { RecipeIngredient } from "~/lib/api/types/recipe";
 
 interface Props {
@@ -77,6 +78,12 @@ const { parseIngredientText } = useIngredientTextParser();
 function validateTitle(title?: string | null) {
   return !(title === undefined || title === "" || title === null);
 }
+
+const cookProgress = useCookProgress();
+
+// While the recipe is being cooked, the checked ingredients are saved with the cooking session
+// and survive a reload. Otherwise they only last for the browser session.
+const usesCookProgress = computed(() => !!props.storageKey && !!cookProgress?.isInProgress.value);
 
 const transientChecked = ref<Record<string, boolean>>({});
 const sessionChecked = props.storageKey
@@ -101,11 +108,32 @@ const ingredientCopyText = computed(() => {
   return components.join("\n");
 });
 
+// Starting to cook moves the ingredients that were already checked into the cooking session.
+// Finishing drops the cooking session. Either way, the checks outside the session are cleared,
+// so that old checks do not come back after the session ends.
+watch(usesCookProgress, (active, wasActive) => {
+  if (active && !wasActive) {
+    for (const [key, checked] of Object.entries(sessionChecked?.value ?? transientChecked.value)) {
+      if (checked) {
+        cookProgress!.setIngredientChecked(key, true);
+      }
+    }
+  }
+
+  transientChecked.value = {};
+  if (sessionChecked) {
+    sessionChecked.value = {};
+  }
+});
+
 function toggleChecked(index: number) {
   setChecked(index, !isChecked(index));
 }
 
 function checkedState() {
+  if (usesCookProgress.value) {
+    return cookProgress!.checkedIngredients.value;
+  }
   return sessionChecked?.value ?? transientChecked.value;
 }
 
@@ -119,6 +147,11 @@ function isChecked(index: number) {
 }
 
 function setChecked(index: number, value: boolean) {
+  if (usesCookProgress.value) {
+    cookProgress!.setIngredientChecked(checkedKey(index), value);
+    return;
+  }
+
   const state = checkedState();
   state[checkedKey(index)] = value;
 

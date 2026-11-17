@@ -245,6 +245,7 @@ import {
   usePageState,
 } from "~/composables/recipe-page/shared-state";
 import { useCookModeQuery, type BooleanString } from "~/composables/recipe-page/use-cook-mode-query";
+import { provideCookProgress } from "~/composables/recipe-page/use-cook-progress";
 import type { NoUndefinedField } from "~/lib/api/types/non-generated";
 import type { Recipe, RecipeCategory, RecipeIngredient, RecipeStep, RecipeTag, RecipeTool } from "~/lib/api/types/recipe";
 import { useRouteQuery } from "~/composables/use-router";
@@ -348,6 +349,23 @@ invoke(async () => {
   await until(recipe.value).not.toBeNull();
   originalRecipe.value = deepCopy(recipe.value);
 });
+
+/**
+ * Cooking sessions are saved straight away, outside of the editor. Copy the saved tags and
+ * extras into the snapshot too, so that a started or finished session does not look like an
+ * unsaved edit.
+ */
+function onCookingUpdated(updated: RecipeOut) {
+  recipe.value.tags = updated.tags;
+  recipe.value.extras = updated.extras;
+
+  if (originalRecipe.value) {
+    originalRecipe.value.tags = deepCopy(updated.tags);
+    originalRecipe.value.extras = deepCopy(updated.extras);
+  }
+}
+
+provideCookProgress(recipe, onCookingUpdated);
 
 function hasUnsavedChanges(): boolean {
   if (originalRecipe.value === null) {

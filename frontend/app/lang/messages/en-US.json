@@ -567,6 +567,8 @@
     "linked-to-other-step": "Linked to other step",
     "auto": "Auto",
     "cook-mode": "Cook Mode",
+    "start-cooking": "Start Cooking",
+    "finish-cooking": "Finish Cooking",
     "link-references": "Link references",
     "linked-notes-with-count": "Linked Notes ({count})",
     "no-notes-to-link": "No notes to link",
