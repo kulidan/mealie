@@ -1,8 +1,12 @@
 name: Build Home Assistant app image
 
 # Builds the Mealie image for a Home Assistant app, from this fork. It is for the
-# deploy branch only. The image goes to GitHub Packages, and a local app on Home
-# Assistant pulls it, so the build does not run on the Raspberry Pi.
+# deploy branch only. The images go to GitHub Packages, and a local app on Home
+# Assistant pulls the one that matches its machine, so the build does not run on
+# the Home Assistant host.
+#
+# One image per architecture: aarch64 for a Raspberry Pi, amd64 for an x86 machine.
+# Each is built on a runner of its own kind, so nothing runs under emulation.
 
 on:
   workflow_dispatch:
@@ -21,15 +25,28 @@ permissions:
 
 env:
   # Keep this equal to the version in ha-app-local/config.yaml.
-  APP_VERSION: "3.30.0-cook.2"
-  IMAGE: ghcr.io/${{ github.repository_owner }}/mealie-cooking-aarch64
+  APP_VERSION: "3.30.0-cook.3"
 
 jobs:
   build:
-    name: Build the aarch64 image
-    # A native Arm runner, so nothing runs under emulation.
-    runs-on: ubuntu-24.04-arm
+    name: Build the ${{ matrix.arch }} image
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
+    # One architecture failing must not stop the other from publishing.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: aarch64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-24.04
+    env:
+      # The image name ends in the architecture, which is what the {arch} in the
+      # app's config.yaml expands to on the Home Assistant host.
+      IMAGE: ghcr.io/${{ github.repository_owner }}/mealie-cooking-${{ matrix.arch }}
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
@@ -48,7 +65,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ha-app
-          platforms: linux/arm64
+          platforms: ${{ matrix.platform }}
           push: true
           tags: |
             ${{ env.IMAGE }}:${{ env.APP_VERSION }}
@@ -57,11 +74,12 @@ jobs:
             MEALIE_REPO=${{ github.repository }}
             MEALIE_REF=${{ github.sha }}
             BUILD_FROM=ghcr.io/hassio-addons/debian-base:9.5.2
-            BUILD_ARCH=aarch64
+            BUILD_ARCH=${{ matrix.arch }}
             BUILD_NAME=Mealie (Cooking Progress)
             BUILD_DESCRIPTION=Mealie with the Start Cooking and Finish Cooking change
             BUILD_REPOSITORY=${{ github.repository }}
             BUILD_REF=${{ github.sha }}
             BUILD_VERSION=${{ env.APP_VERSION }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # A cache per architecture, so the two builds do not overwrite each other.
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}

@@ -3,7 +3,7 @@
 # Put this folder in the "addons" share of Home Assistant as `mealie_cooking`.
 # The image is built by .github/workflows/build-ha-app.yml, not on the device.
 name: Mealie (Cooking Progress)
-version: "3.30.0-cook.2"
+version: "3.30.0-cook.3"
 slug: mealie_cooking
 description: Mealie with Start Cooking and Finish Cooking buttons
 url: https://github.com/kulidan/mealie
@@ -16,6 +16,7 @@ panel_title: Mealie (Cooking)
 init: false
 arch:
   - aarch64
+  - amd64
 backup: cold
 map:
   - type: ssl
