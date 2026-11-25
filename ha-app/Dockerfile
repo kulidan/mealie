@@ -65,6 +65,11 @@ ENV \
 
 COPY --from=uv /uv /usr/local/bin/uv
 
+# The Debian packages in this file are not pinned to exact versions. Debian replaces
+# a package version with a newer one every few weeks, and an exact pin then stops the
+# build ("Version ... was not found"). That is what broke the build on 2026-11-25. The
+# base image and the app version tag are what make an image repeatable here.
+#
 # Only the parts of the source tree the Python distribution is built from, with
 # the generated frontend dropped in where the build backend expects it.
 COPY --from=frontend /usr/src/mealie/pyproject.toml /usr/src/mealie/uv.lock /usr/src/mealie/
@@ -93,11 +98,11 @@ RUN \
     apt-get update \
     \
     && apt-get install -y --no-install-recommends \
-        build-essential=12.12 \
-        libldap2-dev=2.6.10+dfsg-1 \
-        libsasl2-dev=2.1.28+dfsg1-9 \
-        libssl-dev=3.5.7-1~deb13u3 \
-        unzip=6.0-29+deb13u1 \
+        build-essential \
+        libldap2-dev \
+        libsasl2-dev \
+        libssl-dev \
+        unzip \
     \
     && uv python install "${PYTHON_VERSION}" \
     && uv venv --seed --python "${PYTHON_VERSION}" "${VIRTUAL_ENV}" \
@@ -150,10 +155,10 @@ RUN \
     apt-get update \
     \
     && apt-get install -y --no-install-recommends \
-        ffmpeg=7:7.1.5-0+deb13u1 \
-        libldap-common=2.6.10+dfsg-1 \
-        libpq5=17.11-0+deb13u1 \
-        nginx=1.26.3-3+deb13u10 \
+        ffmpeg \
+        libldap-common \
+        libpq5 \
+        nginx \
     \
     && rm -f -r /etc/nginx \
     \
